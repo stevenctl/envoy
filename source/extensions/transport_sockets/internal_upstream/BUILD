@@ -14,6 +14,7 @@ envoy_cc_library(
     srcs = ["internal_upstream.cc"],
     hdrs = ["internal_upstream.h"],
     deps = [
+        "//source/common/network:address_lib",
         "//source/extensions/io_socket/user_space:io_handle_lib",
         "//source/extensions/transport_sockets/common:passthrough_lib",
         "@envoy_api//envoy/extensions/transport_sockets/internal_upstream/v3:pkg_cc_proto",
