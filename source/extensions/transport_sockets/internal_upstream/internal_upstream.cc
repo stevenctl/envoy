@@ -12,9 +12,10 @@ InternalSocket::InternalSocket(
     std::unique_ptr<IoSocket::UserSpace::FilterStateObjects> filter_state_objects)
     : PassthroughSocket(std::move(inner_socket)), metadata_(std::move(metadata)),
       filter_state_objects_(std::move(filter_state_objects)) {
+  // Enabled debug log level to trigger the nullptr check. No metdata is printed.
+  ENVOY_LOG_MISC(debug, (metadata_->DebugString(), std::string("redacted valid metadata")));
 
-
-  auto fmd = metadata->mutable_filter_metadata();
+  auto* fmd = metadata_->mutable_filter_metadata();
   auto iter = fmd->find("tunnel"); // TODO use the explicitly named sources
   if (iter != fmd->end()) {
     auto address_it = iter->second.fields().find("target");
