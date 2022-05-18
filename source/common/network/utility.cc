@@ -503,7 +503,8 @@ Utility::protobufAddressToAddress(const envoy::config::core::v3::Address& proto_
     return std::make_shared<Address::PipeInstance>(proto_address.pipe().path(),
                                                    proto_address.pipe().mode());
   case envoy::config::core::v3::Address::AddressCase::kEnvoyInternalAddress:
-    PANIC("internal address not supported"); // TODO(lambdai) fix.
+    return std::make_shared<Address::EnvoyInternalInstance>(
+        proto_address.envoy_internal_address().server_listener_name());
   case envoy::config::core::v3::Address::AddressCase::ADDRESS_NOT_SET:
     PANIC_DUE_TO_PROTO_UNSET;
   }
@@ -512,13 +513,20 @@ Utility::protobufAddressToAddress(const envoy::config::core::v3::Address& proto_
 
 void Utility::addressToProtobufAddress(const Address::Instance& address,
                                        envoy::config::core::v3::Address& proto_address) {
-  if (address.type() == Address::Type::Pipe) {
-    proto_address.mutable_pipe()->set_path(address.asString());
-  } else {
-    ASSERT(address.type() == Address::Type::Ip);
+  switch (address.type()) {
+  case Address::Type::Ip: {
     auto* socket_address = proto_address.mutable_socket_address();
     socket_address->set_address(address.ip()->addressAsString());
     socket_address->set_port_value(address.ip()->port());
+    break;
+  }
+  case Address::Type::Pipe:
+    proto_address.mutable_pipe()->set_path(address.asString());
+    break;
+  case Address::Type::EnvoyInternal:
+    *proto_address.mutable_envoy_internal_address()->mutable_server_listener_name() =
+        address.envoyInternalAddress()->addressId();
+    break;
   }
 }
 
