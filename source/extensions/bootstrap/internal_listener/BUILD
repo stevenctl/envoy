@@ -98,6 +98,7 @@ envoy_cc_library(
         "//source/common/stream_info:stream_info_lib",
         "//source/extensions/io_socket/user_space:config",
         "//source/server:active_stream_listener_base",
+        "//source/common/network:utility_lib",
         "//source/server:active_tcp_listener",
     ],
 )
