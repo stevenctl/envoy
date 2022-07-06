@@ -7,6 +7,7 @@
 #include "source/common/stats/timespan_impl.h"
 #include "source/extensions/io_socket/user_space/io_handle.h"
 #include "source/server/active_stream_listener_base.h"
+#include "source/common/network/utility.h"
 
 namespace Envoy {
 namespace Extensions {
@@ -64,6 +65,19 @@ void ActiveInternalListener::onAccept(Network::ConnectionSocketPtr&& socket) {
     io_handle->passthroughState()->mergeInto(active_socket->dynamicMetadata(),
                                              active_socket->filterState());
   }
+
+    auto iter = active_socket->dynamicMetadata().filter_metadata().find("tunnel");
+    if (iter != active_socket->dynamicMetadata().filter_metadata().end()) {
+        auto address_it = iter->second.fields().find("tunnel_address");
+        if (address_it != iter->second.fields().end() && address_it->second.has_string_value()) {
+            ENVOY_LOG_MISC(trace, "find tunnel address within socket metadata and set as original dst {}",
+                           address_it->second.string_value());
+            auto local_address = Network::Utility::parseInternetAddressAndPortNoThrow(
+                    address_it->second.string_value(), /*v6only=*/false);
+            active_socket->socket_->connectionInfoProvider().setLocalAddress(local_address);
+            active_socket->socket_->connectionInfoProvider().restoreLocalAddress(local_address);
+        }
+    }
 
   onSocketAccepted(std::move(active_socket));
 }

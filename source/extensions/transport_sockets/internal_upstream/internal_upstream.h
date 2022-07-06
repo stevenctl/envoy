@@ -10,6 +10,17 @@ namespace Extensions {
 namespace TransportSockets {
 namespace InternalUpstream {
 
+    class TunnelInfoImpl : public Network::TunnelInfo {
+    public:
+        explicit TunnelInfoImpl(const Network::Address::InstanceConstSharedPtr& target_tunnel_listener)
+                : target_tunnel_listener_(target_tunnel_listener) {}
+        const Network::Address::InstanceConstSharedPtr& targetTunnelListener() override {
+            return target_tunnel_listener_;
+        }
+    private:
+        const Network::Address::InstanceConstSharedPtr target_tunnel_listener_;
+    };
+
 class InternalSocket : public TransportSockets::PassthroughSocket {
 public:
   InternalSocket(Network::TransportSocketPtr inner_socket,
@@ -19,9 +30,12 @@ public:
   // Network::TransportSocket
   void setTransportSocketCallbacks(Network::TransportSocketCallbacks& callbacks) override;
 
+  Network::TunnelInfoSharedPtr tunnelInfo() const override { return tunnel_info_; }
+
 private:
   std::unique_ptr<envoy::config::core::v3::Metadata> metadata_;
   StreamInfo::FilterState::Objects filter_state_objects_;
+std::shared_ptr<TunnelInfoImpl> tunnel_info_;
 };
 
 } // namespace InternalUpstream
