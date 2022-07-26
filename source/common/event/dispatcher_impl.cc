@@ -163,14 +163,28 @@ Network::ClientConnectionPtr DispatcherImpl::createClientConnection(
     const Network::TransportSocketOptionsConstSharedPtr& transport_options) {
   ASSERT(isThreadSafe());
 
+    const auto& tunnel_info = transport_socket->tunnelInfo();
+    Network::Address::InstanceConstSharedPtr maybe_tunnel_address = address;
+    ENVOY_LOG_MISC(debug, "tunnel info is {}", static_cast<const void*>(tunnel_info.get()));
+    // The tunnel address is modified here because the tunnel address impact the connection factory.
+    if (tunnel_info != nullptr) {
+        if (const auto& tunnel_address = tunnel_info->targetTunnelListener();
+                tunnel_address != nullptr) {
+            maybe_tunnel_address = tunnel_address;
+            ENVOY_LOG_MISC(debug, "new address is {}", tunnel_address->asStringView());
+        } else {
+            ENVOY_LOG_MISC(debug, "no target tunnel listener");
+        }
+    }
+
   auto* factory = Config::Utility::getFactoryByName<Network::ClientConnectionFactory>(
-      std::string(address->addressType()));
+      std::string(maybe_tunnel_address->addressType()));
   // The target address is usually offered by EDS and the EDS api should reject the unsupported
   // address.
   // TODO(lambdai): Return a closed connection if the factory is not found. Note that the caller
   // expects a non-null connection as of today so we cannot gracefully handle unsupported address
   // type.
-  return factory->createClientConnection(*this, address, source_address,
+  return factory->createClientConnection(*this, maybe_tunnel_address, source_address,
                                          std::move(transport_socket), options, transport_options);
 }
 
