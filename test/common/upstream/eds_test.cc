@@ -1615,6 +1615,49 @@ TEST_F(EdsTest, EndpointLocalityWeightsIgnored) {
   EXPECT_EQ(nullptr, cluster_->prioritySet().hostSetsPerPriority()[0]->localityWeights());
 }
 
+// Validate that onConfigUpdate() with multiple endpoints with the same socket address removes the duplicate hosts.
+TEST_F(EdsTest, EndpointDeduplication) {
+  envoy::config::endpoint::v3::ClusterLoadAssignment cluster_load_assignment;
+  cluster_load_assignment.set_cluster_name("fare");
+  {
+    auto* endpoints = cluster_load_assignment.add_endpoints();
+    for (auto i = 0; i < 3; i++) {
+        auto* endpoint_address = endpoints->add_lb_endpoints()
+                ->mutable_endpoint()
+                ->mutable_address()
+                ->mutable_socket_address();
+        endpoint_address->set_address("1.2.3.4");
+        endpoint_address->set_port_value(80);
+    }
+  }
+  initialize();
+  doOnConfigUpdateVerifyNoThrow(cluster_load_assignment);
+  EXPECT_TRUE(initialized_);
+  EXPECT_EQ(1, cluster_->prioritySet().hostSetsPerPriority()[0]->hosts().size());
+}
+
+// Validate that onConfigUpdate() with endpoints with the same internal address does NOT remove duplicate hosts.
+TEST_F(EdsTest, EndpointInternalAddressNoDeduplication) {
+  envoy::config::endpoint::v3::ClusterLoadAssignment cluster_load_assignment;
+  cluster_load_assignment.set_cluster_name("fare");
+  const auto num_hosts = 3;
+  
+  {
+    auto* endpoints = cluster_load_assignment.add_endpoints();
+    for (auto i = 0; i < num_hosts; i++) {
+      auto* endpoint_address = endpoints->add_lb_endpoints()
+              ->mutable_endpoint()
+              ->mutable_address()
+              ->mutable_envoy_internal_address();
+      endpoint_address->set_server_listener_name("internal-listener-addr");
+    }
+  }
+  initialize();
+  doOnConfigUpdateVerifyNoThrow(cluster_load_assignment);
+  EXPECT_TRUE(initialized_);
+  EXPECT_EQ(num_hosts, cluster_->prioritySet().hostSetsPerPriority()[0]->hosts().size());
+}
+
 class EdsLocalityWeightsTest : public EdsTest {
 public:
   void expectLocalityWeightsPresentForClusterConfig(const std::string& config) {

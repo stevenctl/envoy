@@ -133,9 +133,11 @@ void EdsClusterImpl::BatchUpdateHelper::updateLocalityEndpoints(
     const envoy::config::endpoint::v3::LocalityLbEndpoints& locality_lb_endpoint,
     PriorityStateManager& priority_state_manager, absl::flat_hash_set<std::string>& all_new_hosts) {
   const auto address = parent_.resolveProtoAddress(lb_endpoint.endpoint().address());
+
   // When the configuration contains duplicate hosts, only the first one will be retained.
+  // An exception is made for internal addresses as passthrough metadata is usually what makes them unique.
   const auto address_as_string = address->asString();
-  if (all_new_hosts.count(address_as_string) > 0) {
+  if (address->envoyInternalAddress() == nullptr && all_new_hosts.count(address_as_string) > 0) {
     return;
   }
 
