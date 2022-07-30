@@ -1,4 +1,5 @@
 #include <memory>
+#include <string>
 
 #include "envoy/config/cluster/v3/cluster.pb.h"
 #include "envoy/config/core/v3/health_check.pb.h"
@@ -1652,6 +1653,7 @@ TEST_F(EdsTest, EndpointInternalAddressNoDeduplication) {
                                    ->mutable_address()
                                    ->mutable_envoy_internal_address();
       endpoint_address->set_server_listener_name("internal-listener-addr");
+      endpoint_address->set_logical_port("logical-port");
     }
   }
   initialize();
